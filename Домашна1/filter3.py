@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 
 MISSING_CSV = "missing.csv"
-TOP1000_CSV = "binance_data_top1000.csv"
+TOP1000_CSV = "binance_data_filter1_output.csv"
 BASE_URL = "https://api.binance.com"
 MAX_RETRIES = 5
 RETRY_DELAY = 2
