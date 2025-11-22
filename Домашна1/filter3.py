@@ -4,7 +4,7 @@ Fetch missing Binance crypto data and append to top1000 CSV
 
 - Чита missing.csv со симболи без податоци
 - Влече сите достапни дневни OHLCV и 24h метрики
-- Додава само уникатни записи во binance_data_top1000.csv
+- Додава само уникатни записи во binance_data_filter1_output.csv
 """
 
 import pandas as pd
