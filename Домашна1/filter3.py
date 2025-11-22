@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fetch missing Binance crypto data and append to top1000 CSV
+Fetch missing Binance crypto data and append to binance_data_filter1_output.csv
 
 - Чита missing.csv со симболи без податоци
 - Влече сите достапни дневни OHLCV и 24h метрики
