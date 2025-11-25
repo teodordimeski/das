@@ -1,54 +1,52 @@
 #!/usr/bin/env python3
-"""
-Extract latest available data for each symbol
-and print symbols with outdated data, also save missing symbols to missing.csv
-"""
-
 import pandas as pd
 import os
 from datetime import datetime, timedelta
 
-CSV_INPUT = "binance_data_filter1_output.csv"
+CSV_SYMBOLS = "binance_data_filter1_output.csv"
+CSV_TOP = "binance_data_top1000.csv"
 CSV_OUTPUT = "binance_data_filter2_output.csv"
-MISSING_OUTPUT = "missing.csv"
 
+DATE_COLUMN = "date"
+
+POSSIBLE_SYMBOL_COLUMNS = ["symbol", "Symbol", "pair", "Pair", "baseAsset"]
+
+def detect_symbol_column(df):
+    for col in POSSIBLE_SYMBOL_COLUMNS:
+        if col in df.columns:
+            return col
+    raise Exception("❌ Нема колонa за симболи во CSV!")
 
 def main():
-    if not os.path.exists(CSV_INPUT):
-        print(f"❌ Не постои CSV фајл: {CSV_INPUT}")
+    if not os.path.exists(CSV_SYMBOLS):
+        print(f"❌ Не постои CSV фајл: {CSV_SYMBOLS}")
+        return
+    if not os.path.exists(CSV_TOP):
+        print(f"❌ Не постои CSV фајл: {CSV_TOP}")
         return
 
-    # Чита CSV
-    df = pd.read_csv(CSV_INPUT, parse_dates=["date"])
+    symbols_df = pd.read_csv(CSV_SYMBOLS)
+    symbols_col = detect_symbol_column(symbols_df)
+    symbols = symbols_df[symbols_col].unique()
 
-    # Наоѓа последен ред за секој симбол
-    latest_rows = df.sort_values("date").groupby("symbol", as_index=False).last()
+    top_df = pd.read_csv(CSV_TOP, parse_dates=[DATE_COLUMN])
+    top_symbol_col = detect_symbol_column(top_df)
 
-    # Денес и вчера
-    today = datetime.utcnow().date()
-    yesterday = today - timedelta(days=1)
+    filtered = top_df[top_df[top_symbol_col].isin(symbols)]
+    print("Filtered rows:", len(filtered))
 
-    # Симболи со застарени податоци
-    outdated_symbols = latest_rows[~latest_rows["date"].isin([today, yesterday])]["symbol"].tolist()
+    if filtered.empty:
+        print("❌ НЕМА СОВПАЃАЊЕ МЕЃУ СИМБОЛИТЕ!")
+        return
 
-    if outdated_symbols:
-        print("⚠️ Симболи со застарени податоци (немаат info за денес/вчера):")
-        for sym in outdated_symbols:
-            print(f"  - {sym}")
+    latest_data = (
+        filtered.sort_values(DATE_COLUMN)
+        .groupby(top_symbol_col, as_index=False)[DATE_COLUMN]
+        .last()
+    )
 
-        # Зачувај missing symbols во CSV
-        pd.DataFrame({"symbol": outdated_symbols}).to_csv(MISSING_OUTPUT, index=False)
-        print(f"\n✅ Симболи без актуелни податоци се зачувани во {MISSING_OUTPUT}")
-    else:
-        print("✅ Сите симболи имаат актуелни податоци (денес или вчера)")
-        # Дури и ако нема, креирај празен missing.csv
-        pd.DataFrame(columns=["symbol"]).to_csv(MISSING_OUTPUT, index=False)
-
-    # Зачувај во нов CSV со последните редови
-    latest_rows.to_csv(CSV_OUTPUT, index=False)
-    print(f"\n✅ Завршено! Резултатот е зачуван во {CSV_OUTPUT}")
-    print(f"📌 Вкупно символи: {len(latest_rows)}")
-
+    latest_data.to_csv(CSV_OUTPUT, index=False)
+    print(f"✅ Креиран CSV: {CSV_OUTPUT}")
 
 if __name__ == "__main__":
     main()
