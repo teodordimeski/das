@@ -1,0 +1,336 @@
+.homepage {
+  min-height: 100vh;
+  background: #10121a;
+  color: #ffffff;
+  padding: 0;
+}
+
+.homepage-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Rotating Ticker */
+.rotating-ticker {
+  width: 100%;
+  overflow: hidden;
+  background: #0c0f17;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px 0;
+  position: relative;
+  z-index: 10;
+}
+
+.ticker-content {
+  display: flex;
+  animation: scroll-left 60s linear infinite;
+  gap: 24px;
+  width: fit-content;
+  will-change: transform;
+}
+
+.ticker-item {
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.ticker-item:hover {
+  transform: scale(1.15);
+  z-index: 1;
+}
+
+.ticker-badge {
+  display: inline-block;
+  padding: 10px 20px;
+  background: var(--crypto-color, #4ade80);
+  color: #ffffff;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ticker-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.ticker-badge:hover::before {
+  left: 100%;
+}
+
+.ticker-badge:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), 0 0 20px var(--crypto-color, #4ade80);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-3px);
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Pause animation on hover */
+.rotating-ticker:hover .ticker-content {
+  animation-play-state: paused;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ticker-badge {
+    padding: 8px 16px;
+    font-size: 11px;
+  }
+  
+  .ticker-content {
+    gap: 16px;
+    animation-duration: 30s;
+  }
+}
+
+/* Search Section */
+.search-section {
+  margin-bottom: 40px;
+}
+
+.search-section-title {
+  font-size: 42px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.search-section-subtitle {
+  font-size: 23px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+/* Search Bar */
+.search-container {
+  position: relative;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.search-input {
+  width: 100%;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #4ade80;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 8px;
+  background: #11141f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.search-result-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+/* Crypto Grid */
+.crypto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 50px;
+  padding: 20px;
+  background: rgba(17, 20, 31, 0.9);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.crypto-grid-item {
+  padding: 20px;
+  background: #0c0f17;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  font-size: 14px;
+  color: #4ade80;
+}
+
+.crypto-grid-item:hover {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: #4ade80;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(74, 222, 128, 0.25);
+}
+
+/* Charts Section */
+.charts-section {
+  margin-top: 40px;
+}
+
+/* Full Width Charts - One below the other, same width as grid */
+.full-width-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.full-width-charts .chart-container {
+  width: 100%;
+}
+
+/* Small Charts - 2x2 Grid */
+.small-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.chart-container {
+  background: rgba(17, 20, 31, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+  background: rgba(74, 222, 128, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.chart-container.full-width {
+  min-height: 400px;
+  width: 100%;
+}
+
+.chart-container.small {
+  min-height: 200px;
+}
+
+.chart-title {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.chart-title-small {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.chart-loading,
+.chart-loading-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.chart-loading-small {
+  height: 150px;
+}
+
+.chart-no-data,
+.chart-no-data-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.chart-no-data-small {
+  height: 150px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .homepage {
+    padding: 20px 10px;
+  }
+
+  .full-width-charts {
+    gap: 20px;
+  }
+
+  .small-charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crypto-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .crypto-grid-item {
+    padding: 15px;
+    font-size: 12px;
+  }
+}
+
