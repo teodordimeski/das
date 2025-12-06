@@ -35,12 +35,16 @@ const SymbolDetail = () => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [timeframe, setTimeframe] = useState('MONTHLY');
+  const [technicalData, setTechnicalData] = useState(null);
+  const [loadingTechnical, setLoadingTechnical] = useState(false);
 
   useEffect(() => {
     setFormRange(defaultRange);
     fetchSymbolData(defaultRange.from, defaultRange.to);
+    fetchTechnicalData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSymbol, defaultRange.from, defaultRange.to]);
+  }, [selectedSymbol, defaultRange.from, defaultRange.to, timeframe]);
 
   const fetchSymbolData = async (from, to) => {
     if (!from || !to) {
@@ -155,6 +159,55 @@ const SymbolDetail = () => {
 
   const handleApplyRange = () => {
     fetchSymbolData(formRange.from, formRange.to);
+  };
+
+  const fetchTechnicalData = async () => {
+    if (!selectedSymbol) return;
+
+    setLoadingTechnical(true);
+    try {
+      const url = `http://localhost:8080/api/technical/${selectedSymbol}?timeframe=${timeframe}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error('Unable to load technical analysis data.');
+      }
+
+      const data = await response.json();
+      setTechnicalData(data);
+    } catch (err) {
+      console.error('Error fetching technical data:', err);
+      setTechnicalData(null);
+    } finally {
+      setLoadingTechnical(false);
+    }
+  };
+
+  const getSignalClass = (signal) => {
+    if (!signal) return 'neutral';
+    const upper = signal.toUpperCase();
+    if (upper.includes('STRONG_BUY') || upper === 'BUY') return 'buy';
+    if (upper.includes('STRONG_SELL') || upper === 'SELL') return 'sell';
+    return 'neutral';
+  };
+
+  const getSignalColor = (signal) => {
+    const signalClass = getSignalClass(signal);
+    if (signalClass === 'buy') return '#4ade80';
+    if (signalClass === 'sell') return '#f87171';
+    return 'rgba(255, 255, 255, 0.6)';
+  };
+
+  const calculateGaugeAngle = (buyCount, sellCount, neutralCount) => {
+    const total = buyCount + sellCount + neutralCount;
+    if (total === 0) return 50; // Default to middle
+    const buyRatio = buyCount / total;
+    const sellRatio = sellCount / total;
+    
+    // Gauge arc goes from 0 to 180 degrees
+    // Calculate percentage: buy pushes toward 180, sell toward 0, neutral is 90
+    const anglePercent = (buyRatio * 180 + sellRatio * 0 + neutralCount / total * 90) / (buyRatio + sellRatio + (neutralCount / total));
+    return Math.max(0, Math.min(180, anglePercent));
   };
 
   const latestEntry = tableData[tableData.length - 1];
@@ -291,6 +344,184 @@ const SymbolDetail = () => {
               <div className="chart-placeholder">No data for the selected range.</div>
             )}
           </div>
+        </section>
+
+        <section className="technical-analysis-section">
+          <div className="section-header">
+            <div>
+              <h2>Technical Indicators</h2>
+              <p>Oscillators and moving averages analysis for {selectedSymbol}</p>
+            </div>
+            <div className="timeframe-selector">
+              <label htmlFor="timeframe">Timeframe:</label>
+              <select
+                id="timeframe"
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value)}
+                className="timeframe-dropdown"
+              >
+                <option value="DAILY">Day</option>
+                <option value="WEEKLY">Week</option>
+                <option value="MONTHLY">Month</option>
+              </select>
+            </div>
+          </div>
+
+          {loadingTechnical ? (
+            <div className="technical-placeholder">Loading technical analysis...</div>
+          ) : technicalData ? (
+            <div className="technical-indicators-grid">
+              {/* Oscillators Section */}
+              <div className="indicators-panel">
+                <div className="indicators-summary">
+                  <h3>Oscillators</h3>
+                  <div className="gauge-container">
+                    <div className="gauge-wrapper">
+                      <svg className="gauge" viewBox="0 0 200 110" width="200" height="110">
+                        <defs>
+                          <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#f87171" />
+                            <stop offset="50%" stopColor="rgba(255,255,255,0.6)" />
+                            <stop offset="100%" stopColor="#4ade80" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d="M 20 90 A 80 80 0 0 1 180 90"
+                          fill="none"
+                          stroke="rgba(255,255,255,0.1)"
+                          strokeWidth="12"
+                        />
+                        <path
+                          d="M 20 90 A 80 80 0 0 1 180 90"
+                          fill="none"
+                          stroke={getSignalColor(technicalData.oscillatorSummary?.overallSignal)}
+                          strokeWidth="12"
+                          strokeLinecap="round"
+                          strokeDasharray="251"
+                          strokeDashoffset={251 - (calculateGaugeAngle(
+                            technicalData.oscillatorSummary?.buyCount || 0,
+                            technicalData.oscillatorSummary?.sellCount || 0,
+                            technicalData.oscillatorSummary?.neutralCount || 0
+                          ) * 1.396)}
+                        />
+                      </svg>
+                      <div className="gauge-label">
+                        <span style={{ color: getSignalColor(technicalData.oscillatorSummary?.overallSignal) }}>
+                          {technicalData.oscillatorSummary?.overallSignal?.replace(/_/g, ' ') || 'Neutral'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="summary-counts">
+                    <span className="count sell">Sell {technicalData.oscillatorSummary?.sellCount || 0}</span>
+                    <span className="count neutral">Neutral {technicalData.oscillatorSummary?.neutralCount || 0}</span>
+                    <span className="count buy">Buy {technicalData.oscillatorSummary?.buyCount || 0}</span>
+                  </div>
+                </div>
+                <div className="indicators-table">
+                  <h4>Oscillators &gt;</h4>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Indicator</th>
+                        <th>Value</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {technicalData.oscillators?.map((osc, idx) => (
+                        <tr key={idx}>
+                          <td>{osc.displayName}</td>
+                          <td>{osc.value?.toFixed(2) || '—'}</td>
+                          <td>
+                            <span className={`signal-badge ${getSignalClass(osc.signal)}`}>
+                              {osc.signal || 'Neutral'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Moving Averages Section */}
+              <div className="indicators-panel">
+                <div className="indicators-summary">
+                  <h3>Moving Averages</h3>
+                  <div className="gauge-container">
+                    <div className="gauge-wrapper">
+                      <svg className="gauge" viewBox="0 0 200 110" width="200" height="110">
+                        <defs>
+                          <linearGradient id="gauge-gradient-ma" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#f87171" />
+                            <stop offset="50%" stopColor="rgba(255,255,255,0.6)" />
+                            <stop offset="100%" stopColor="#4ade80" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d="M 20 90 A 80 80 0 0 1 180 90"
+                          fill="none"
+                          stroke="rgba(255,255,255,0.1)"
+                          strokeWidth="12"
+                        />
+                        <path
+                          d="M 20 90 A 80 80 0 0 1 180 90"
+                          fill="none"
+                          stroke={getSignalColor(technicalData.movingAverageSummary?.overallSignal)}
+                          strokeWidth="12"
+                          strokeLinecap="round"
+                          strokeDasharray="251"
+                          strokeDashoffset={251 - (calculateGaugeAngle(
+                            technicalData.movingAverageSummary?.buyCount || 0,
+                            technicalData.movingAverageSummary?.sellCount || 0,
+                            technicalData.movingAverageSummary?.neutralCount || 0
+                          ) * 1.396)}
+                        />
+                      </svg>
+                      <div className="gauge-label">
+                        <span style={{ color: getSignalColor(technicalData.movingAverageSummary?.overallSignal) }}>
+                          {technicalData.movingAverageSummary?.overallSignal?.replace(/_/g, ' ') || 'Neutral'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="summary-counts">
+                    <span className="count sell">Sell {technicalData.movingAverageSummary?.sellCount || 0}</span>
+                    <span className="count neutral">Neutral {technicalData.movingAverageSummary?.neutralCount || 0}</span>
+                    <span className="count buy">Buy {technicalData.movingAverageSummary?.buyCount || 0}</span>
+                  </div>
+                </div>
+                <div className="indicators-table">
+                  <h4>Moving Averages &gt;</h4>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Indicator</th>
+                        <th>Value</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {technicalData.movingAverages?.map((ma, idx) => (
+                        <tr key={idx}>
+                          <td>{ma.displayName}</td>
+                          <td>{ma.value?.toFixed(2) || '—'}</td>
+                          <td>
+                            <span className={`signal-badge ${getSignalClass(ma.signal)}`}>
+                              {ma.signal || 'Neutral'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="technical-placeholder">No technical analysis data available.</div>
+          )}
         </section>
 
         <section className="symbol-detail-table">
