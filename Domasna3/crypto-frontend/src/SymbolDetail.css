@@ -301,6 +301,10 @@ tbody tr:hover {
   color: rgba(255, 255, 255, 0.6);
 }
 
+.technical-placeholder.error {
+  color: #f87171;
+}
+
 .technical-indicators-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

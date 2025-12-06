@@ -248,108 +248,90 @@ public class TechnicalAnalysisServiceImpl implements TechnicalAnalysisService {
         ClosePriceIndicator closePrice = new ClosePriceIndicator(series);
         VolumeIndicator volume = new VolumeIndicator(series);
 
-        int[] maPeriods = {10, 20, 30, 50, 100};
+        int period = 20; // All moving averages use period 20
         double currentPrice = closePrice.getValue(series.getEndIndex()).doubleValue();
 
-        // SMA indicators
-        for (int period : maPeriods) {
-            if (series.getBarCount() > period) {
-                SMAIndicator sma = new SMAIndicator(closePrice, period);
-                double smaValue = sma.getValue(series.getEndIndex()).doubleValue();
-                String smaSignal = currentPrice > smaValue ? "BUY" : "SELL";
-                movingAverages.add(new MovingAverageIndicatorDTO(
-                    "SMA_" + period,
-                    round(smaValue, 2),
-                    smaSignal,
-                    String.format("Simple Moving Average (%d)", period)
-                ));
-            }
+        if (series.getBarCount() <= period) {
+            return movingAverages; // Not enough data
         }
 
-        // EMA indicators
-        for (int period : maPeriods) {
-            if (series.getBarCount() > period) {
-                EMAIndicator ema = new EMAIndicator(closePrice, period);
-                double emaValue = ema.getValue(series.getEndIndex()).doubleValue();
-                String emaSignal = currentPrice > emaValue ? "BUY" : "SELL";
-                movingAverages.add(new MovingAverageIndicatorDTO(
-                    "EMA_" + period,
-                    round(emaValue, 2),
-                    emaSignal,
-                    String.format("Exponential Moving Average (%d)", period)
-                ));
-            }
-        }
+        // SMA indicator
+        SMAIndicator sma = new SMAIndicator(closePrice, period);
+        double smaValue = sma.getValue(series.getEndIndex()).doubleValue();
+        String smaSignal = currentPrice > smaValue ? "BUY" : "SELL";
+        movingAverages.add(new MovingAverageIndicatorDTO(
+            "SMA",
+            round(smaValue, 2),
+            smaSignal,
+            "Simple Moving Average"
+        ));
 
-        // WMA (10, 20, 30)
-        int[] wmaPeriods = {10, 20, 30};
-        for (int period : wmaPeriods) {
-            if (series.getBarCount() > period) {
-                WMAIndicator wma = new WMAIndicator(closePrice, period);
-                double wmaValue = wma.getValue(series.getEndIndex()).doubleValue();
-                String wmaSignal = currentPrice > wmaValue ? "BUY" : "SELL";
-                movingAverages.add(new MovingAverageIndicatorDTO(
-                    "WMA_" + period,
-                    round(wmaValue, 2),
-                    wmaSignal,
-                    String.format("Weighted Moving Average (%d)", period)
-                ));
-            }
-        }
+        // EMA indicator
+        EMAIndicator ema = new EMAIndicator(closePrice, period);
+        double emaValue = ema.getValue(series.getEndIndex()).doubleValue();
+        String emaSignal = currentPrice > emaValue ? "BUY" : "SELL";
+        movingAverages.add(new MovingAverageIndicatorDTO(
+            "EMA",
+            round(emaValue, 2),
+            emaSignal,
+            "Exponential Moving Average"
+        ));
 
-        // Bollinger Bands (20, 2)
-        int bbPeriod = 20;
+        // WMA indicator
+        WMAIndicator wma = new WMAIndicator(closePrice, period);
+        double wmaValue = wma.getValue(series.getEndIndex()).doubleValue();
+        String wmaSignal = currentPrice > wmaValue ? "BUY" : "SELL";
+        movingAverages.add(new MovingAverageIndicatorDTO(
+            "WMA",
+            round(wmaValue, 2),
+            wmaSignal,
+            "Weighted Moving Average"
+        ));
+
+        // Bollinger Bands
         double bbMultiplier = 2.0;
-        if (series.getBarCount() > bbPeriod) {
-            try {
-                SMAIndicator sma = new SMAIndicator(closePrice, bbPeriod);
-                StandardDeviationIndicator stdDev = new StandardDeviationIndicator(closePrice, bbPeriod);
-                
-                double middleValue = sma.getValue(series.getEndIndex()).doubleValue();
-                double stdDevValue = stdDev.getValue(series.getEndIndex()).doubleValue();
-                
-                double upperValue = middleValue + (bbMultiplier * stdDevValue);
-                double lowerValue = middleValue - (bbMultiplier * stdDevValue);
-                
-                movingAverages.add(new MovingAverageIndicatorDTO(
-                    "BB_UPPER",
-                    round(upperValue, 2),
-                    "SELL",
-                    String.format("Bollinger Bands Upper (%d, %.1f)", bbPeriod, bbMultiplier)
-                ));
-                movingAverages.add(new MovingAverageIndicatorDTO(
-                    "BB_MIDDLE",
-                    round(middleValue, 2),
-                    "NEUTRAL",
-                    String.format("Bollinger Bands Middle (%d, %.1f)", bbPeriod, bbMultiplier)
-                ));
-                movingAverages.add(new MovingAverageIndicatorDTO(
-                    "BB_LOWER",
-                    round(lowerValue, 2),
-                    "BUY",
-                    String.format("Bollinger Bands Lower (%d, %.1f)", bbPeriod, bbMultiplier)
-                ));
-            } catch (Exception e) {
-                // Skip if indicator cannot be calculated
-            }
+        try {
+            StandardDeviationIndicator stdDev = new StandardDeviationIndicator(closePrice, period);
+            
+            double middleValue = smaValue;
+            double stdDevValue = stdDev.getValue(series.getEndIndex()).doubleValue();
+            
+            double upperValue = middleValue + (bbMultiplier * stdDevValue);
+            double lowerValue = middleValue - (bbMultiplier * stdDevValue);
+            
+            movingAverages.add(new MovingAverageIndicatorDTO(
+                "BB_UPPER",
+                round(upperValue, 2),
+                "SELL",
+                "Bollinger Bands Upper"
+            ));
+            movingAverages.add(new MovingAverageIndicatorDTO(
+                "BB_MIDDLE",
+                round(middleValue, 2),
+                "NEUTRAL",
+                "Bollinger Bands Middle"
+            ));
+            movingAverages.add(new MovingAverageIndicatorDTO(
+                "BB_LOWER",
+                round(lowerValue, 2),
+                "BUY",
+                "Bollinger Bands Lower"
+            ));
+        } catch (Exception e) {
+            // Skip if indicator cannot be calculated
         }
 
-        // Volume Moving Averages (10, 20)
-        int[] volumeMaPeriods = {10, 20};
-        for (int period : volumeMaPeriods) {
-            if (series.getBarCount() > period) {
-                SMAIndicator volumeSMA = new SMAIndicator(volume, period);
-                double volumeMaValue = volumeSMA.getValue(series.getEndIndex()).doubleValue();
-                double currentVolume = volume.getValue(series.getEndIndex()).doubleValue();
-                String volumeSignal = currentVolume > volumeMaValue ? "BUY" : "SELL";
-                movingAverages.add(new MovingAverageIndicatorDTO(
-                    "VOLUME_SMA_" + period,
-                    round(volumeMaValue, 0),
-                    volumeSignal,
-                    String.format("Volume Simple Moving Average (%d)", period)
-                ));
-            }
-        }
+        // Volume Moving Average
+        SMAIndicator volumeSMA = new SMAIndicator(volume, period);
+        double volumeMaValue = volumeSMA.getValue(series.getEndIndex()).doubleValue();
+        double currentVolume = volume.getValue(series.getEndIndex()).doubleValue();
+        String volumeSignal = currentVolume > volumeMaValue ? "BUY" : "SELL";
+        movingAverages.add(new MovingAverageIndicatorDTO(
+            "VOLUME_SMA",
+            round(volumeMaValue, 0),
+            volumeSignal,
+            "Volume Simple Moving Average"
+        ));
 
         return movingAverages;
     }

@@ -38,6 +38,7 @@ const SymbolDetail = () => {
   const [timeframe, setTimeframe] = useState('MONTHLY');
   const [technicalData, setTechnicalData] = useState(null);
   const [loadingTechnical, setLoadingTechnical] = useState(false);
+  const [technicalError, setTechnicalError] = useState(null);
 
   useEffect(() => {
     setFormRange(defaultRange);
@@ -165,19 +166,30 @@ const SymbolDetail = () => {
     if (!selectedSymbol) return;
 
     setLoadingTechnical(true);
+    setTechnicalError(null);
     try {
       const url = `http://localhost:8080/api/technical/${selectedSymbol}?timeframe=${timeframe}`;
       const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error('Unable to load technical analysis data.');
+        let errorMessage = 'Unable to load technical analysis data.';
+        if (response.status === 400) {
+          errorMessage = 'Insufficient data for technical analysis. Need at least 50 data points.';
+        } else if (response.status === 404) {
+          errorMessage = 'Symbol not found or no data available.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
       setTechnicalData(data);
+      setTechnicalError(null);
     } catch (err) {
       console.error('Error fetching technical data:', err);
       setTechnicalData(null);
+      setTechnicalError(err.message || 'Unable to load technical analysis data.');
     } finally {
       setLoadingTechnical(false);
     }
@@ -357,7 +369,10 @@ const SymbolDetail = () => {
               <select
                 id="timeframe"
                 value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value)}
+                onChange={(e) => {
+                  setTimeframe(e.target.value);
+                  setTechnicalError(null);
+                }}
                 className="timeframe-dropdown"
               >
                 <option value="DAILY">Day</option>
@@ -369,6 +384,17 @@ const SymbolDetail = () => {
 
           {loadingTechnical ? (
             <div className="technical-placeholder">Loading technical analysis...</div>
+          ) : technicalError ? (
+            <div className="technical-placeholder error">
+              {technicalError}
+              <p style={{ marginTop: '12px', fontSize: '14px', opacity: 0.7 }}>
+                Technical analysis requires at least 50 data points. 
+                {timeframe === 'MONTHLY' && ' For monthly analysis, you need at least 50 months of data.'}
+                {timeframe === 'WEEKLY' && ' For weekly analysis, you need at least 50 weeks of data.'}
+                {timeframe === 'DAILY' && ' For daily analysis, you need at least 50 days of data.'}
+                {' '}Try selecting a longer date range or switch to a different timeframe.
+              </p>
+            </div>
           ) : technicalData ? (
             <div className="technical-indicators-grid">
               {/* Oscillators Section */}
@@ -398,11 +424,11 @@ const SymbolDetail = () => {
                           strokeWidth="12"
                           strokeLinecap="round"
                           strokeDasharray="251"
-                          strokeDashoffset={251 - (calculateGaugeAngle(
+                          strokeDashoffset={251 * (1 - (calculateGaugeAngle(
                             technicalData.oscillatorSummary?.buyCount || 0,
                             technicalData.oscillatorSummary?.sellCount || 0,
                             technicalData.oscillatorSummary?.neutralCount || 0
-                          ) * 1.396)}
+                          ) / 180))}
                         />
                       </svg>
                       <div className="gauge-label">
@@ -472,11 +498,11 @@ const SymbolDetail = () => {
                           strokeWidth="12"
                           strokeLinecap="round"
                           strokeDasharray="251"
-                          strokeDashoffset={251 - (calculateGaugeAngle(
+                          strokeDashoffset={251 * (1 - (calculateGaugeAngle(
                             technicalData.movingAverageSummary?.buyCount || 0,
                             technicalData.movingAverageSummary?.sellCount || 0,
                             technicalData.movingAverageSummary?.neutralCount || 0
-                          ) * 1.396)}
+                          ) / 180))}
                         />
                       </svg>
                       <div className="gauge-label">
