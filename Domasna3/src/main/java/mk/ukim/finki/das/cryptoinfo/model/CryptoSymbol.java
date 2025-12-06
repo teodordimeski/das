@@ -16,7 +16,7 @@ import java.time.LocalDate;
 
 @Data
 @Entity
-@Table(name = "crypto_coins")
+@Table(name = "cryptosymbols")
 @NoArgsConstructor
 @AllArgsConstructor
 public class CryptoSymbol implements Serializable {
