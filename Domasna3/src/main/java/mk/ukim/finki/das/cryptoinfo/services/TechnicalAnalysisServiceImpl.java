@@ -44,9 +44,9 @@ public class TechnicalAnalysisServiceImpl implements TechnicalAnalysisService {
         // Convert to TA4J BarSeries
         BarSeries series = convertToBarSeries(aggregatedData);
 
-        if (series.getBarCount() < 50) {
-            // Need at least 50 bars for most indicators
-            throw new IllegalArgumentException("Insufficient data points for technical analysis. Need at least 50 bars.");
+        if (series.getBarCount() < 12) {
+            // Need at least 12 bars for indicators with period 10
+            throw new IllegalArgumentException("Insufficient data points for technical analysis. Need at least 12 bars.");
         }
 
         // Calculate oscillators
@@ -165,8 +165,8 @@ public class TechnicalAnalysisServiceImpl implements TechnicalAnalysisService {
         List<OscillatorIndicatorDTO> oscillators = new ArrayList<>();
         ClosePriceIndicator closePrice = new ClosePriceIndicator(series);
 
-        // RSI (14)
-        int rsiPeriod = 14;
+        // RSI (10)
+        int rsiPeriod = 10;
         RSIIndicator rsi = new RSIIndicator(closePrice, rsiPeriod);
         if (series.getBarCount() > rsiPeriod) {
             double rsiValue = rsi.getValue(series.getEndIndex()).doubleValue();
@@ -175,27 +175,26 @@ public class TechnicalAnalysisServiceImpl implements TechnicalAnalysisService {
                 "RSI",
                 round(rsiValue, 2),
                 rsiSignal,
-                String.format("Relative Strength Index (%d)", rsiPeriod)
+                "Relative Strength Index"
             ));
         }
 
-        // MACD (12, 26, 9)
-        MACDIndicator macd = new MACDIndicator(closePrice, 12, 26);
-        if (series.getBarCount() > 26) {
+        // MACD (10, 10, 9)
+        MACDIndicator macd = new MACDIndicator(closePrice, 10, 10);
+        if (series.getBarCount() > 10) {
             double macdValue = macd.getValue(series.getEndIndex()).doubleValue();
             String macdSignal = macdValue > 0 ? "BUY" : "SELL";
             oscillators.add(new OscillatorIndicatorDTO(
                 "MACD",
                 round(macdValue, 2),
                 macdSignal,
-                "MACD Level (12, 26)"
+                "MACD Level"
             ));
         }
 
-        // Stochastic Oscillator (14, 3, 3) - Simplified implementation
-        int stochKPeriod = 14;
+        // Stochastic Oscillator (10, 3, 3) - Simplified implementation
+        int stochKPeriod = 10;
         int stochK1 = 3;
-        int stochD1 = 3;
         try {
             StochasticOscillatorKIndicator stochasticK = new StochasticOscillatorKIndicator(series, stochKPeriod);
             if (series.getBarCount() > stochKPeriod + stochK1) {
@@ -205,29 +204,29 @@ public class TechnicalAnalysisServiceImpl implements TechnicalAnalysisService {
                     "STOCH",
                     round(stochKValue, 2),
                     stochSignal,
-                    String.format("Stochastic %%K (%d, %d, %d)", stochKPeriod, stochK1, stochD1)
+                    "Stochastic %K"
                 ));
             }
         } catch (Exception e) {
             // Skip if indicator cannot be calculated
         }
 
-        // ADX (14)
-        int adxPeriod = 14;
+        // ADX (10)
+        int adxPeriod = 10;
         ADXIndicator adx = new ADXIndicator(series, adxPeriod);
-        if (series.getBarCount() > adxPeriod * 2) {
+        if (series.getBarCount() > adxPeriod + 2) {
             double adxValue = adx.getValue(series.getEndIndex()).doubleValue();
             String adxSignal = adxValue > 25 ? "BUY" : adxValue > 20 ? "NEUTRAL" : "SELL";
             oscillators.add(new OscillatorIndicatorDTO(
                 "ADX",
                 round(adxValue, 2),
                 adxSignal,
-                String.format("Average Directional Index (%d)", adxPeriod)
+                "Average Directional Index"
             ));
         }
 
-        // CCI (20)
-        int cciPeriod = 20;
+        // CCI (10)
+        int cciPeriod = 10;
         CCIIndicator cci = new CCIIndicator(series, cciPeriod);
         if (series.getBarCount() > cciPeriod) {
             double cciValue = cci.getValue(series.getEndIndex()).doubleValue();
@@ -236,7 +235,7 @@ public class TechnicalAnalysisServiceImpl implements TechnicalAnalysisService {
                 "CCI",
                 round(cciValue, 2),
                 cciSignal,
-                String.format("Commodity Channel Index (%d)", cciPeriod)
+                "Commodity Channel Index"
             ));
         }
 
@@ -248,7 +247,7 @@ public class TechnicalAnalysisServiceImpl implements TechnicalAnalysisService {
         ClosePriceIndicator closePrice = new ClosePriceIndicator(series);
         VolumeIndicator volume = new VolumeIndicator(series);
 
-        int period = 20; // All moving averages use period 20
+        int period = 10; // All moving averages use period 10
         double currentPrice = closePrice.getValue(series.getEndIndex()).doubleValue();
 
         if (series.getBarCount() <= period) {

@@ -40,12 +40,19 @@ const SymbolDetail = () => {
   const [loadingTechnical, setLoadingTechnical] = useState(false);
   const [technicalError, setTechnicalError] = useState(null);
 
+  // Effect for symbol change - reset date range and fetch data
   useEffect(() => {
     setFormRange(defaultRange);
     fetchSymbolData(defaultRange.from, defaultRange.to);
     fetchTechnicalData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSymbol, defaultRange.from, defaultRange.to, timeframe]);
+  }, [selectedSymbol, defaultRange.from, defaultRange.to]);
+
+  // Effect for timeframe change - only refetch technical data, don't reset date range
+  useEffect(() => {
+    fetchTechnicalData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeframe]);
 
   const fetchSymbolData = async (from, to) => {
     if (!from || !to) {
@@ -215,10 +222,11 @@ const SymbolDetail = () => {
     if (total === 0) return 50; // Default to middle
     const buyRatio = buyCount / total;
     const sellRatio = sellCount / total;
+    const neutralRatio = neutralCount / total;
     
     // Gauge arc goes from 0 to 180 degrees
     // Calculate percentage: buy pushes toward 180, sell toward 0, neutral is 90
-    const anglePercent = (buyRatio * 180 + sellRatio * 0 + neutralCount / total * 90) / (buyRatio + sellRatio + (neutralCount / total));
+    const anglePercent = (buyRatio * 180 + sellRatio * 0 + neutralRatio * 90);
     return Math.max(0, Math.min(180, anglePercent));
   };
 
