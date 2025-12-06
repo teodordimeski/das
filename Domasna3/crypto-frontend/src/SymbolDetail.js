@@ -13,7 +13,7 @@ import './SymbolDetail.css';
 
 const formatISO = (date) => date.toISOString().split('T')[0];
 const formatLabel = (isoDate) =>
-  new Date(isoDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  new Date(isoDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 const SymbolDetail = () => {
   const { symbol } = useParams();

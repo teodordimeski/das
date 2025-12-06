@@ -1,52 +1,121 @@
 #!/usr/bin/env python3
-import pandas as pd
+"""
+Filter2: Track latest available dates per symbol
+
+- Executed after Filter1 finishes on app startup, and once per day after midnight
+- Connect to cryptoCoins database
+- Ensure latestInfo table exists with columns: symbol and last_available_date (no nulls)
+- Write/update one row per symbol with its latest available date
+"""
+
 import os
-from datetime import datetime, timedelta
+import sys
+import psycopg2
+from psycopg2 import sql
 
-CSV_SYMBOLS = "binance_data_filter1_output.csv"
-CSV_TOP = "binance_data_top1000.csv"
-CSV_OUTPUT = "binance_data_filter2_output.csv"
+# Database configuration - can be overridden by environment variables
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = "cryptoCoins"
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "admin")
 
-DATE_COLUMN = "date"
 
-POSSIBLE_SYMBOL_COLUMNS = ["symbol", "Symbol", "pair", "Pair", "baseAsset"]
+def create_latest_info_table_if_not_exists(conn):
+    """Create latestInfo table if it doesn't exist"""
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS latestInfo (
+                symbol VARCHAR(255) PRIMARY KEY,
+                last_available_date DATE NOT NULL
+            )
+        """)
+        conn.commit()
+        print("✅ Table latestInfo created or already exists")
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Error creating latestInfo table: {e}")
+        return False
+    finally:
+        cursor.close()
 
-def detect_symbol_column(df):
-    for col in POSSIBLE_SYMBOL_COLUMNS:
-        if col in df.columns:
-            return col
-    raise Exception("❌ Нема колонa за симболи во CSV!")
+
+def update_latest_dates(conn):
+    """Update latestInfo table with latest available date for each symbol"""
+    cursor = conn.cursor()
+    try:
+        # First, get all symbols and their latest dates from cryptoSymbols
+        cursor.execute("""
+            SELECT symbol, MAX(date) as last_available_date
+            FROM cryptosymbols
+            GROUP BY symbol
+        """)
+        
+        symbol_dates = cursor.fetchall()
+        
+        if not symbol_dates:
+            print("⚠️  No symbols found in cryptoSymbols table")
+            return 0
+        
+        # Insert/update each symbol's latest date
+        updated_symbols = []
+        for symbol, last_date in symbol_dates:
+            cursor.execute("""
+                INSERT INTO latestInfo (symbol, last_available_date)
+                VALUES (%s, %s)
+                ON CONFLICT (symbol) 
+                DO UPDATE SET last_available_date = EXCLUDED.last_available_date
+            """, (symbol, last_date))
+            updated_symbols.append((symbol, last_date))
+        
+        conn.commit()
+        
+        # Print each updated symbol
+        print(f"✅ Updated latest dates for {len(updated_symbols)} symbols:")
+        for symbol, last_date in updated_symbols:
+            print(f"   - {symbol}: {last_date}")
+        
+        return len(updated_symbols)
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Error updating latest dates: {e}")
+        return 0
+    finally:
+        cursor.close()
+
 
 def main():
-    if not os.path.exists(CSV_SYMBOLS):
-        print(f"❌ Не постои CSV фајл: {CSV_SYMBOLS}")
-        return
-    if not os.path.exists(CSV_TOP):
-        print(f"❌ Не постои CSV фајл: {CSV_TOP}")
-        return
+    print("🚀 Starting Filter2: Tracking latest available dates")
+    
+    # Connect to cryptoCoins database
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME
+        )
+    except Exception as e:
+        print(f"❌ Error connecting to database: {e}")
+        sys.exit(1)
+    
+    try:
+        # Ensure latestInfo table exists
+        if not create_latest_info_table_if_not_exists(conn):
+            print("❌ Failed to create latestInfo table")
+            sys.exit(1)
+        
+        # Update latest dates for all symbols
+        update_latest_dates(conn)
+        
+        print("✅ Filter2 completed!")
+        
+    finally:
+        conn.close()
 
-    symbols_df = pd.read_csv(CSV_SYMBOLS)
-    symbols_col = detect_symbol_column(symbols_df)
-    symbols = symbols_df[symbols_col].unique()
-
-    top_df = pd.read_csv(CSV_TOP, parse_dates=[DATE_COLUMN])
-    top_symbol_col = detect_symbol_column(top_df)
-
-    filtered = top_df[top_df[top_symbol_col].isin(symbols)]
-    print("Filtered rows:", len(filtered))
-
-    if filtered.empty:
-        print("❌ НЕМА СОВПАЃАЊЕ МЕЃУ СИМБОЛИТЕ!")
-        return
-
-    latest_data = (
-        filtered.sort_values(DATE_COLUMN)
-        .groupby(top_symbol_col, as_index=False)[DATE_COLUMN]
-        .last()
-    )
-
-    latest_data.to_csv(CSV_OUTPUT, index=False)
-    print(f"✅ Креиран CSV: {CSV_OUTPUT}")
 
 if __name__ == "__main__":
     main()
