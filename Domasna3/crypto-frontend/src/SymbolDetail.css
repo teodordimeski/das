@@ -316,6 +316,8 @@ tbody tr:hover {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .indicators-summary {
@@ -391,18 +393,21 @@ tbody tr:hover {
 .indicators-table {
   background: rgba(255, 255, 255, 0.02);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .indicators-table h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
+  margin: 0 0 8px 0;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .indicators-table table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .indicators-table thead {
@@ -411,10 +416,36 @@ tbody tr:hover {
 
 .indicators-table th,
 .indicators-table td {
-  padding: 12px 8px;
+  padding: 6px 2px;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 13px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.indicators-table th:first-child,
+.indicators-table td:first-child {
+  width: 25% !important;
+  padding-right: 0px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 25%;
+}
+
+.indicators-table th:nth-child(2),
+.indicators-table td:nth-child(2) {
+  width: 42% !important;
+  text-align: right;
+  padding-left: 0px !important;
+  padding-right: 6px !important;
+}
+
+.indicators-table th:nth-child(3),
+.indicators-table td:nth-child(3) {
+  width: 32%;
+  text-align: center;
+  padding-left: 4px;
 }
 
 .indicators-table th {
@@ -429,11 +460,12 @@ tbody tr:hover {
 }
 
 .signal-badge {
-  padding: 4px 10px;
+  padding: 3px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .signal-badge.buy {

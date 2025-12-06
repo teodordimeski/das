@@ -453,7 +453,7 @@ const SymbolDetail = () => {
                   </div>
                 </div>
                 <div className="indicators-table">
-                  <h4>Oscillators &gt;</h4>
+                  <h4>Oscillators</h4>
                   <table>
                     <thead>
                       <tr>
@@ -527,7 +527,7 @@ const SymbolDetail = () => {
                   </div>
                 </div>
                 <div className="indicators-table">
-                  <h4>Moving Averages &gt;</h4>
+                  <h4>Moving Averages</h4>
                   <table>
                     <thead>
                       <tr>
