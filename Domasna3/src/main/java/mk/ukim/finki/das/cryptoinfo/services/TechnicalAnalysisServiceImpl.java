@@ -179,9 +179,12 @@ public class TechnicalAnalysisServiceImpl implements TechnicalAnalysisService {
             ));
         }
 
-        // MACD (10, 10, 9)
-        MACDIndicator macd = new MACDIndicator(closePrice, 10, 10);
-        if (series.getBarCount() > 10) {
+        // MACD (12, 26, 9) - Standard MACD parameters
+        // Fast EMA: 12, Slow EMA: 26
+        int macdFastPeriod = 12;
+        int macdSlowPeriod = 26;
+        MACDIndicator macd = new MACDIndicator(closePrice, macdFastPeriod, macdSlowPeriod);
+        if (series.getBarCount() > macdSlowPeriod) {
             double macdValue = macd.getValue(series.getEndIndex()).doubleValue();
             String macdSignal = macdValue > 0 ? "BUY" : "SELL";
             oscillators.add(new OscillatorIndicatorDTO(
