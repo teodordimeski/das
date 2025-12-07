@@ -32,5 +32,8 @@ public interface CryptoSymbolInterface extends JpaRepository<CryptoSymbol, Long>
 
     // Find by primary key (explicitly declared for clarity)
     Optional<CryptoSymbol> findById(Long id);
+    
+    // Get data ordered by date for technical analysis
+    List<CryptoSymbol> findBySymbolIgnoreCaseOrderByDateAsc(String symbol);
 }
 

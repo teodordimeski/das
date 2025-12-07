@@ -1,0 +1,16 @@
+package mk.ukim.finki.das.cryptoinfo.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class TechnicalIndicatorDTO {
+    private String name;
+    private Double value;
+    private String signal; // BUY, SELL, NEUTRAL
+    private String description;
+}
+

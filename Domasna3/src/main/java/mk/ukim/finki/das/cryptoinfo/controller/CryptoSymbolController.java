@@ -2,6 +2,8 @@ package mk.ukim.finki.das.cryptoinfo.controller;
 
 import mk.ukim.finki.das.cryptoinfo.model.CryptoSymbol;
 import mk.ukim.finki.das.cryptoinfo.services.CryptoSymbolService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -9,17 +11,42 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "http://localhost:3000")
 public class CryptoSymbolController {
 
+    private static final Logger logger = LoggerFactory.getLogger(CryptoSymbolController.class);
     private final CryptoSymbolService cryptoService;
 
     public CryptoSymbolController(CryptoSymbolService cryptoService) {
         this.cryptoService = cryptoService;
+    }
+
+    // ----------------------------------------------------
+    // HEALTH CHECK / TEST ENDPOINT
+    // URL: GET http://localhost:8080/api/health
+    // ----------------------------------------------------
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> healthCheck() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            long count = cryptoService.getAllData(PageRequest.of(0, 1)).size();
+            response.put("status", "UP");
+            response.put("database", "connected");
+            response.put("recordsAvailable", count > 0);
+            logger.info("Health check: Database connected, records available: {}", count > 0);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (Exception e) {
+            response.put("status", "DOWN");
+            response.put("error", e.getMessage());
+            logger.error("Health check failed: ", e);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     // ----------------------------------------------------
@@ -32,11 +59,18 @@ public class CryptoSymbolController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "1000000") int size
     ) {
-        // Limit max size to prevent crashes (max 10000 records per request)
-        int safeSize = Math.min(size, 10000);
-        Pageable pageable = PageRequest.of(page, safeSize);
-        List<CryptoSymbol> result = cryptoService.getAllData(pageable);
-        return new ResponseEntity<>(result, HttpStatus.OK);
+        try {
+            logger.info("GET /api - page: {}, size: {}", page, size);
+            // Limit max size to prevent crashes (max 10000 records per request)
+            int safeSize = Math.min(size, 10000);
+            Pageable pageable = PageRequest.of(page, safeSize);
+            List<CryptoSymbol> result = cryptoService.getAllData(pageable);
+            logger.info("GET /api - returned {} records", result.size());
+            return new ResponseEntity<>(result, HttpStatus.OK);
+        } catch (Exception e) {
+            logger.error("Error in getAllData: ", e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     // ----------------------------------------------------
@@ -67,18 +101,26 @@ public class CryptoSymbolController {
             @RequestParam(value = "from", required = false) String from,
             @RequestParam(value = "to", required = false) String to
     ) {
-        // If date range parameters are provided, filter by date range
-        if (from != null && to != null) {
-            LocalDate fromDate = LocalDate.parse(from);
-            LocalDate toDate = LocalDate.parse(to);
-            List<CryptoSymbol> result =
-                    cryptoService.findBySymbolsAndDate(symbol, fromDate, toDate);
+        try {
+            logger.info("GET /api/symbol/{} - from: {}, to: {}", symbol, from, to);
+            // If date range parameters are provided, filter by date range
+            if (from != null && to != null) {
+                LocalDate fromDate = LocalDate.parse(from);
+                LocalDate toDate = LocalDate.parse(to);
+                List<CryptoSymbol> result =
+                        cryptoService.findBySymbolsAndDate(symbol, fromDate, toDate);
+                logger.info("GET /api/symbol/{} - returned {} records (date range)", symbol, result.size());
+                return new ResponseEntity<>(result, HttpStatus.OK);
+            }
+            
+            // Otherwise, return all data for the symbol
+            List<CryptoSymbol> result = cryptoService.findBySymbol(symbol);
+            logger.info("GET /api/symbol/{} - returned {} records", symbol, result.size());
             return new ResponseEntity<>(result, HttpStatus.OK);
+        } catch (Exception e) {
+            logger.error("Error in getBySymbol for {}: ", symbol, e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        
-        // Otherwise, return all data for the symbol
-        List<CryptoSymbol> result = cryptoService.findBySymbol(symbol);
-        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     // ----------------------------------------------------
