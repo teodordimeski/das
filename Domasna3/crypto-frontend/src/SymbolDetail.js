@@ -454,28 +454,30 @@ const SymbolDetail = () => {
                 </div>
                 <div className="indicators-table">
                   <h4>Oscillators</h4>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Indicator</th>
-                        <th>Value</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {technicalData.oscillators?.map((osc, idx) => (
-                        <tr key={idx}>
-                          <td>{osc.displayName}</td>
-                          <td>{osc.value?.toFixed(2) || '—'}</td>
-                          <td>
-                            <span className={`signal-badge ${getSignalClass(osc.signal)}`}>
-                              {osc.signal || 'Neutral'}
-                            </span>
-                          </td>
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Indicator</th>
+                          <th>Value</th>
+                          <th>Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {technicalData.oscillators?.map((osc, idx) => (
+                          <tr key={idx}>
+                            <td>{osc.displayName}</td>
+                            <td>{osc.value?.toFixed(2) || '—'}</td>
+                            <td>
+                              <span className={`signal-badge ${getSignalClass(osc.signal)}`}>
+                                {osc.signal || 'Neutral'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
@@ -528,28 +530,30 @@ const SymbolDetail = () => {
                 </div>
                 <div className="indicators-table">
                   <h4>Moving Averages</h4>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Indicator</th>
-                        <th>Value</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {technicalData.movingAverages?.map((ma, idx) => (
-                        <tr key={idx}>
-                          <td>{ma.displayName}</td>
-                          <td>{ma.value?.toFixed(2) || '—'}</td>
-                          <td>
-                            <span className={`signal-badge ${getSignalClass(ma.signal)}`}>
-                              {ma.signal || 'Neutral'}
-                            </span>
-                          </td>
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Indicator</th>
+                          <th>Value</th>
+                          <th>Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {technicalData.movingAverages?.map((ma, idx) => (
+                          <tr key={idx}>
+                            <td>{ma.displayName}</td>
+                            <td>{ma.value?.toFixed(2) || '—'}</td>
+                            <td>
+                              <span className={`signal-badge ${getSignalClass(ma.signal)}`}>
+                                {ma.signal || 'Neutral'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>

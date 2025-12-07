@@ -408,6 +408,12 @@ tbody tr:hover {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 400px;
+}
+
+.indicators-table .table-scroll {
+  overflow-x: auto;
+  margin-top: 8px;
 }
 
 .indicators-table thead {
