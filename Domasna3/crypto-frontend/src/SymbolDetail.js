@@ -215,8 +215,12 @@ const SymbolDetail = () => {
   };
 
   const fetchPrediction = async () => {
-    if (!selectedSymbol) return;
+    if (!selectedSymbol) {
+      console.log('[Prediction] No symbol selected, skipping');
+      return;
+    }
 
+    console.log('[Prediction] Starting fetch for symbol:', selectedSymbol);
     setLoadingPrediction(true);
     setPredictionError(null);
     try {
@@ -229,16 +233,28 @@ const SymbolDetail = () => {
       console.log('[Prediction] Response status:', response.status, response.statusText);
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Prediction] Error response body:', errorText);
+        console.error('[Prediction] Response headers:', Object.fromEntries(response.headers.entries()));
+        
         let errorMessage = 'Unable to load prediction.';
         if (response.status === 400) {
-          errorMessage = 'Model not trained or insufficient data.';
+          // Try to parse error message from response
+          try {
+            const errorJson = JSON.parse(errorText);
+            if (errorJson.error) {
+              errorMessage = errorJson.error;
+            } else {
+              errorMessage = 'Model not trained or insufficient data.';
+            }
+          } catch (e) {
+            errorMessage = errorText || 'Model not trained or insufficient data.';
+          }
         } else if (response.status === 404) {
           errorMessage = 'Symbol not found.';
         } else if (response.status >= 500) {
           errorMessage = 'Server error. Please try again later.';
         }
-        const errorText = await response.text();
-        console.error('[Prediction] Error response:', errorText);
         throw new Error(errorMessage);
       }
 
