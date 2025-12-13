@@ -87,8 +87,9 @@ public class PythonFilterService {
             // Make script executable
             scriptFile.setExecutable(true);
 
-            // Build command
-            String[] command = {"python3", scriptFile.getAbsolutePath()};
+            // Build command (use "python" on Windows, "python3" on Linux/Mac)
+            String pythonCmd = System.getProperty("os.name").toLowerCase().contains("win") ? "python" : "python3";
+            String[] command = {pythonCmd, scriptFile.getAbsolutePath()};
             
             logger.info("📝 Executing: {}", scriptName);
             

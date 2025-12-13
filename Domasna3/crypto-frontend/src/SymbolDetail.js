@@ -15,6 +15,14 @@ const formatISO = (date) => date.toISOString().split('T')[0];
 const formatLabel = (isoDate) =>
   new Date(isoDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+// Extract base symbol (e.g., "BTCUSDT" -> "BTC")
+const getBaseSymbol = (symbol) => {
+  if (!symbol) return '';
+  const upper = symbol.toUpperCase();
+  // Remove common quote assets
+  return upper.replace(/USDT$|USDC$|BUSD$|BTC$|ETH$/, '') || upper;
+};
+
 const SymbolDetail = () => {
   const { symbol } = useParams();
   const selectedSymbol = (symbol || '').toUpperCase();
@@ -39,12 +47,16 @@ const SymbolDetail = () => {
   const [technicalData, setTechnicalData] = useState(null);
   const [loadingTechnical, setLoadingTechnical] = useState(false);
   const [technicalError, setTechnicalError] = useState(null);
+  const [prediction, setPrediction] = useState(null);
+  const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [predictionError, setPredictionError] = useState(null);
 
   // Effect for symbol change - reset date range and fetch data
   useEffect(() => {
     setFormRange(defaultRange);
     fetchSymbolData(defaultRange.from, defaultRange.to);
     fetchTechnicalData();
+    fetchPrediction();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSymbol, defaultRange.from, defaultRange.to]);
 
@@ -202,6 +214,41 @@ const SymbolDetail = () => {
     }
   };
 
+  const fetchPrediction = async () => {
+    if (!selectedSymbol) return;
+
+    setLoadingPrediction(true);
+    setPredictionError(null);
+    try {
+      // Extract base symbol (e.g., "BTCUSDT" -> "BTC")
+      const baseSymbol = getBaseSymbol(selectedSymbol);
+      const url = `http://localhost:8080/api/predictions/${baseSymbol}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        let errorMessage = 'Unable to load prediction.';
+        if (response.status === 400) {
+          errorMessage = 'Model not trained or insufficient data.';
+        } else if (response.status === 404) {
+          errorMessage = 'Symbol not found.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setPrediction(data);
+      setPredictionError(null);
+    } catch (err) {
+      console.error('Error fetching prediction:', err);
+      setPrediction(null);
+      setPredictionError(err.message || 'Unable to load prediction.');
+    } finally {
+      setLoadingPrediction(false);
+    }
+  };
+
   const getSignalClass = (signal) => {
     if (!signal) return 'neutral';
     const upper = signal.toUpperCase();
@@ -267,6 +314,23 @@ const SymbolDetail = () => {
             <span className={`stat-pill ${priceChange >= 0 ? 'positive' : 'negative'}`}>
               {priceChange >= 0 ? '+' : ''}
               {priceChange.toFixed(2)}%
+            </span>
+          </div>
+          <div className="stat-card">
+            <p className="stat-label">Predicted close</p>
+            <p className="stat-value">
+              {loadingPrediction ? (
+                'Loading...'
+              ) : predictionError ? (
+                'N/A'
+              ) : prediction?.predicted_close ? (
+                `$${prediction.predicted_close.toFixed(2)}`
+              ) : (
+                'N/A'
+              )}
+            </p>
+            <span className="stat-pill neutral">
+              {loadingPrediction ? 'Calculating...' : predictionError ? 'Error' : 'LSTM Prediction'}
             </span>
           </div>
           <div className="stat-card">
