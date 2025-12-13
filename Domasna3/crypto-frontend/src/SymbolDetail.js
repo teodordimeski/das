@@ -215,31 +215,18 @@ const SymbolDetail = () => {
   };
 
   const fetchPrediction = async () => {
-    if (!selectedSymbol) {
-      console.log('[Prediction] No symbol selected, skipping');
-      return;
-    }
+    if (!selectedSymbol) return;
 
-    console.log('[Prediction] Starting fetch for symbol:', selectedSymbol);
     setLoadingPrediction(true);
     setPredictionError(null);
     try {
-      // Send full symbol to backend (e.g., "BTCUSDT", "ETHBUSD")
-      // Backend will handle symbol normalization if needed
       const url = `http://localhost:8080/api/predictions/${selectedSymbol}`;
-      console.log('[Prediction] Fetching from:', url);
       const response = await fetch(url);
-
-      console.log('[Prediction] Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[Prediction] Error response body:', errorText);
-        console.error('[Prediction] Response headers:', Object.fromEntries(response.headers.entries()));
-        
         let errorMessage = 'Unable to load prediction.';
         if (response.status === 400) {
-          // Try to parse error message from response
           try {
             const errorJson = JSON.parse(errorText);
             if (errorJson.error) {
@@ -259,11 +246,10 @@ const SymbolDetail = () => {
       }
 
       const data = await response.json();
-      console.log('[Prediction] Received data:', data);
       setPrediction(data);
       setPredictionError(null);
     } catch (err) {
-      console.error('[Prediction] Error fetching prediction:', err);
+      console.error('Error fetching prediction:', err);
       setPrediction(null);
       setPredictionError(err.message || 'Unable to load prediction.');
     } finally {
