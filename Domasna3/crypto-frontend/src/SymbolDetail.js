@@ -223,7 +223,10 @@ const SymbolDetail = () => {
       // Send full symbol to backend (e.g., "BTCUSDT", "ETHBUSD")
       // Backend will handle symbol normalization if needed
       const url = `http://localhost:8080/api/predictions/${selectedSymbol}`;
+      console.log('[Prediction] Fetching from:', url);
       const response = await fetch(url);
+
+      console.log('[Prediction] Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         let errorMessage = 'Unable to load prediction.';
@@ -234,14 +237,17 @@ const SymbolDetail = () => {
         } else if (response.status >= 500) {
           errorMessage = 'Server error. Please try again later.';
         }
+        const errorText = await response.text();
+        console.error('[Prediction] Error response:', errorText);
         throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('[Prediction] Received data:', data);
       setPrediction(data);
       setPredictionError(null);
     } catch (err) {
-      console.error('Error fetching prediction:', err);
+      console.error('[Prediction] Error fetching prediction:', err);
       setPrediction(null);
       setPredictionError(err.message || 'Unable to load prediction.');
     } finally {
@@ -323,8 +329,8 @@ const SymbolDetail = () => {
                 'Loading...'
               ) : predictionError ? (
                 'N/A'
-              ) : prediction?.predicted_close ? (
-                `$${prediction.predicted_close.toFixed(2)}`
+              ) : prediction && (prediction.predicted_close !== null && prediction.predicted_close !== undefined) ? (
+                `$${Number(prediction.predicted_close).toFixed(2)}`
               ) : (
                 'N/A'
               )}
