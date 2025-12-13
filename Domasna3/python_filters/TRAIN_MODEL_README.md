@@ -179,3 +179,4 @@ with open('lstm_models/BTCUSDT_scaler.pkl', 'rb') as f:
 
 
 
+

@@ -32,10 +32,8 @@ public class PredictionService {
                 throw new RuntimeException("Prediction script not found: " + scriptFile.getAbsolutePath());
             }
 
-            // Convert symbol format (e.g., "BTC" -> "BTCUSDT")
             String fullSymbol = normalizeSymbol(symbol);
 
-            // Build command
             String pythonCmd = System.getProperty("os.name").toLowerCase().contains("win") ? "python" : "python3";
             List<String> command = new ArrayList<>();
             command.add(pythonCmd);
@@ -50,7 +48,6 @@ public class PredictionService {
 
             Process process = processBuilder.start();
 
-            // Read output (stderr is merged into stdout when redirectErrorStream(true))
             StringBuilder output = new StringBuilder();
             
             try (BufferedReader reader = new BufferedReader(
@@ -67,31 +64,31 @@ public class PredictionService {
 
             if (exitCode != 0) {
                 String errorMsg = output.toString();
-                // Try to parse JSON error from output (since stderr is redirected)
+                logger.error("Prediction script failed with exit code {} for symbol: {}", exitCode, symbol);
+                logger.error("Script output: {}", errorMsg);
+                
                 try {
-                    // Look for JSON error in output
                     int jsonStart = errorMsg.indexOf("{");
                     if (jsonStart != -1) {
                         String jsonPart = errorMsg.substring(jsonStart);
                         var errorJson = objectMapper.readTree(jsonPart);
                         if (errorJson.has("error")) {
-                            throw new IllegalArgumentException(errorJson.get("error").asText());
+                            String errorMessage = errorJson.get("error").asText();
+                            logger.error("Parsed error from script: {}", errorMessage);
+                            throw new IllegalArgumentException(errorMessage);
                         }
                     }
                 } catch (IllegalArgumentException e) {
-                    // Re-throw IllegalArgumentException to preserve error message
                     throw e;
                 } catch (Exception e) {
-                    // Not JSON or parsing failed, use raw error below
+                    logger.error("Failed to parse error JSON: {}", e.getMessage());
                 }
                 throw new RuntimeException("Prediction failed with exit code: " + exitCode + "\n" + errorMsg);
             }
 
-            // Parse JSON output
             String jsonOutput = output.toString().trim();
             logger.debug("Prediction output: {}", jsonOutput);
 
-            // Find JSON in output (might have stderr messages before)
             int jsonStart = jsonOutput.indexOf("{");
             if (jsonStart == -1) {
                 throw new RuntimeException("No JSON output from prediction script");
@@ -100,7 +97,6 @@ public class PredictionService {
 
             PredictionDTO result = objectMapper.readValue(jsonOutput, PredictionDTO.class);
             
-            // Return with the original symbol format (not the full symbol)
             result.setSymbol(symbol.toUpperCase());
             
             logger.info("Prediction completed for {}: predicted_close={}", 
@@ -117,22 +113,18 @@ public class PredictionService {
         }
     }
 
-    /**
-     * Normalize symbol format (e.g., "BTC" -> "BTCUSDT")
-     * Tries common quote assets: USDT, USDC, BUSD
-     */
     private String normalizeSymbol(String symbol) {
         String upperSymbol = symbol.toUpperCase();
         
-        // If already has quote asset, return as is
         if (upperSymbol.endsWith("USDT") || upperSymbol.endsWith("USDC") || 
-            upperSymbol.endsWith("BUSD") || upperSymbol.endsWith("BTC") || 
-            upperSymbol.endsWith("ETH")) {
+            upperSymbol.endsWith("BUSD")) {
             return upperSymbol;
         }
         
-        // Try to find the symbol in database with common quote assets
-        // Default to USDT (most common)
+        if (upperSymbol.length() > 3 && (upperSymbol.endsWith("BTC") || upperSymbol.endsWith("ETH"))) {
+            return upperSymbol;
+        }
+        
         return upperSymbol + "USDT";
     }
 }

@@ -217,27 +217,27 @@ def main():
         df = get_ohlcv_data(symbol)
         
         if df.empty:
-            print(f"❌ Error: No data found for symbol {symbol}")
+            print(f"[ERROR] No data found for symbol {symbol}")
             sys.exit(1)
         
-        print(f"✅ Loaded {len(df)} records")
+        print(f"[OK] Loaded {len(df)} records")
         print(f"   Date range: {df['date'].min()} to {df['date'].max()}")
         
         # Check minimum data requirement
         min_required = LOOKBACK_PERIOD + 50  # Need at least 60 + 50 for training
         if len(df) < min_required:
-            print(f"❌ Error: Insufficient data. Need at least {min_required} records, got {len(df)}")
+            print(f"[ERROR] Insufficient data. Need at least {min_required} records, got {len(df)}")
             sys.exit(1)
         
         # Step 2: Normalize data
         print(f"\n[2/6] Normalizing data...")
         scaled_data, scaler = normalize_data(df)
-        print(f"✅ Data normalized to [0, 1] range")
+        print(f"[OK] Data normalized to [0, 1] range")
         
         # Step 3: Create 60-day lookback sequences
         print(f"\n[3/6] Creating {LOOKBACK_PERIOD}-day lookback sequences...")
         X, y = create_sequences(scaled_data, LOOKBACK_PERIOD)
-        print(f"✅ Created {len(X)} sequences")
+        print(f"[OK] Created {len(X)} sequences")
         print(f"   Input shape: {X.shape}")
         print(f"   Target shape: {y.shape}")
         
@@ -246,14 +246,14 @@ def main():
         split_idx = int(len(X) * TRAIN_SPLIT)
         X_train, X_val = X[:split_idx], X[split_idx:]
         y_train, y_val = y[:split_idx], y[split_idx:]
-        print(f"✅ Training samples: {len(X_train)}")
-        print(f"✅ Validation samples: {len(X_val)}")
+        print(f"[OK] Training samples: {len(X_train)}")
+        print(f"[OK] Validation samples: {len(X_val)}")
         
         # Step 5: Build LSTM model
         print(f"\n[5/6] Building LSTM model...")
         input_shape = (LOOKBACK_PERIOD, 5)  # 60 days, 5 features
         model = build_lstm_model(input_shape, LSTM_UNITS, DROPOUT_RATE)
-        print(f"✅ Model built")
+        print(f"[OK] Model built")
         print(f"   Architecture: 3 LSTM layers ({LSTM_UNITS} units each) + Dense output")
         model.summary()
         
@@ -282,10 +282,10 @@ def main():
         print(f"  - {MODELS_DIR}/{symbol}_model.h5")
         print(f"  - {MODELS_DIR}/{symbol}_scaler.pkl")
         print("=" * 60)
-        print("✅ Training completed successfully!")
+        print("[OK] Training completed successfully!")
         
     except Exception as e:
-        print(f"\n❌ Error during training: {e}")
+        print(f"\n[ERROR] Error during training: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -293,6 +293,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
