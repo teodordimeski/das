@@ -78,8 +78,11 @@ public class PredictionService {
                             throw new IllegalArgumentException(errorJson.get("error").asText());
                         }
                     }
+                } catch (IllegalArgumentException e) {
+                    // Re-throw IllegalArgumentException to preserve error message
+                    throw e;
                 } catch (Exception e) {
-                    // Not JSON, use raw error
+                    // Not JSON or parsing failed, use raw error below
                 }
                 throw new RuntimeException("Prediction failed with exit code: " + exitCode + "\n" + errorMsg);
             }

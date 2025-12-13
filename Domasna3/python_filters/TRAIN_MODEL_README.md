@@ -177,3 +177,5 @@ with open('lstm_models/BTCUSDT_scaler.pkl', 'rb') as f:
 - Best model weights are saved automatically
 - Scaler is required for inverse transformation of predictions
 
+
+

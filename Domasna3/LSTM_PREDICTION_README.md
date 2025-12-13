@@ -175,3 +175,5 @@ The frontend can call this endpoint to display:
 - Predictions are based on historical patterns
 - **Disclaimer**: Predictions are for analysis purposes only, not financial advice
 
+
+

@@ -99,14 +99,14 @@ public class PythonFilterService {
             
             Process process = processBuilder.start();
             
-            // Read output
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream())
-            );
-            
-            String line;
-            while ((line = reader.readLine()) != null) {
-                logger.info("[{}] {}", scriptName, line);
+            // Read output (use try-with-resources to ensure BufferedReader is closed)
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))) {
+                
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.info("[{}] {}", scriptName, line);
+                }
             }
             
             int exitCode = process.waitFor();

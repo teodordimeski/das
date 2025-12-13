@@ -220,9 +220,9 @@ const SymbolDetail = () => {
     setLoadingPrediction(true);
     setPredictionError(null);
     try {
-      // Extract base symbol (e.g., "BTCUSDT" -> "BTC")
-      const baseSymbol = getBaseSymbol(selectedSymbol);
-      const url = `http://localhost:8080/api/predictions/${baseSymbol}`;
+      // Send full symbol to backend (e.g., "BTCUSDT", "ETHBUSD")
+      // Backend will handle symbol normalization if needed
+      const url = `http://localhost:8080/api/predictions/${selectedSymbol}`;
       const response = await fetch(url);
 
       if (!response.ok) {
