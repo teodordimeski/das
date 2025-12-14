@@ -44,7 +44,7 @@ DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "admin")
 
 # Model configuration
-DEFAULT_LOOKBACK = 30  # days
+DEFAULT_LOOKBACK = 60  # days
 DEFAULT_TRAIN_SPLIT = 0.7  # 70% for training
 DEFAULT_PREDICTION_DAYS = 7  # Predict next 7 days
 MODEL_DIR = "lstm_models"
