@@ -22,8 +22,8 @@ public class LSTMPredictionController {
 
     /**
      * GET LSTM price prediction for a symbol
-     * URL: GET http://localhost:8080/api/lstm/{symbol}?lookback=30&days=7
-     * Example: GET http://localhost:8080/api/lstm/BTCUSDT?lookback=30&days=7
+     * URL: GET http://localhost:8080/api/lstm/{symbol}?lookback=60&days=1
+     * Example: GET http://localhost:8080/api/lstm/BTCUSDT?lookback=60&days=1
      */
     @GetMapping("/{symbol}")
     public ResponseEntity<LSTMPredictionDTO> getLSTMPrediction(
