@@ -34,3 +34,6 @@ build/
 
 ### macOS ###
 .DS_Store
+
+# LSTM models and artifacts (trained models, scalers, checkpoints, metadata)
+python_filters/lstm_models/

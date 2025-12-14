@@ -6,6 +6,7 @@ import json
 import pickle
 import numpy as np
 import pandas as pd
+from datetime import datetime, timedelta
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential, load_model, save_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
@@ -16,6 +17,9 @@ warnings.filterwarnings('ignore')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(SCRIPT_DIR, "lstm_models")
+META_SUFFIX = "_meta.json"
+# Retrain if model older than this many days OR if DB has newer data
+RETRAIN_DAYS = int(os.getenv("LSTM_RETRAIN_DAYS", "7"))
 
 # Configuration (matching train_model.py)
 LOOKBACK_PERIOD = 60  # 60-day lookback sequences
@@ -65,22 +69,56 @@ def train_model_if_needed(symbol, df):
     scaler_path = os.path.join(MODELS_DIR, f"{symbol}_scaler.pkl")
     
     # Check if model exists
-    if os.path.exists(model_path) and os.path.exists(scaler_path):
+    meta_path = os.path.join(MODELS_DIR, f"{symbol}{META_SUFFIX}")
+    model_exists = os.path.exists(model_path) and os.path.exists(scaler_path)
+    if model_exists:
         try:
             print(f"Loading pre-trained model for {symbol}...", file=sys.stderr)
             model = load_model(model_path)
             with open(scaler_path, 'rb') as f:
                 scaler = pickle.load(f)
-            
+
             # Get lookback period from model
             input_shape = model.input_shape
             if input_shape and len(input_shape) >= 2:
                 lookback_period = int(input_shape[1] if input_shape[1] else input_shape[0])
             else:
                 lookback_period = LOOKBACK_PERIOD
-            
-            print(f"Loaded pre-trained model (lookback={lookback_period})", file=sys.stderr)
-            return model, scaler, lookback_period
+
+            # Load metadata if available to decide if retraining is needed
+            needs_retrain = False
+            try:
+                if os.path.exists(meta_path):
+                    with open(meta_path, 'r') as mf:
+                        meta = json.load(mf)
+                    # Compare DB last date with metadata last_data_date
+                    db_last = pd.to_datetime(df['date'].max())
+                    meta_last = pd.to_datetime(meta.get('last_data_date')) if meta.get('last_data_date') else None
+                    last_trained = pd.to_datetime(meta.get('last_trained')) if meta.get('last_trained') else None
+
+                    if meta_last is None:
+                        needs_retrain = True
+                    else:
+                        if db_last > meta_last:
+                            print(f"Detected newer DB data (db:{db_last.date()} > meta:{meta_last.date()}) -> retrain needed", file=sys.stderr)
+                            needs_retrain = True
+                        elif last_trained is not None and (datetime.utcnow() - pd.to_datetime(last_trained).to_pydatetime()) > timedelta(days=RETRAIN_DAYS):
+                            print(f"Model older than {RETRAIN_DAYS} days (last_trained={last_trained.date()}) -> retrain recommended", file=sys.stderr)
+                            needs_retrain = True
+                else:
+                    # No metadata file => safer to retrain
+                    print(f"No metadata found for {symbol} -> retrain recommended", file=sys.stderr)
+                    needs_retrain = True
+            except Exception as e:
+                print(f"⚠️  Failed to read meta for {symbol}: {e} -> retrain recommended", file=sys.stderr)
+                needs_retrain = True
+
+            if needs_retrain:
+                print(f"Retraining model for {symbol} due to freshness policy...", file=sys.stderr)
+                # fall through to training logic below
+            else:
+                print(f"Loaded pre-trained model (lookback={lookback_period})", file=sys.stderr)
+                return model, scaler, lookback_period
         except Exception as e:
             print(f"Error loading model: {e}. Will train new one.", file=sys.stderr)
     
@@ -134,6 +172,20 @@ def train_model_if_needed(symbol, df):
     save_model(model, model_path)
     with open(scaler_path, 'wb') as f:
         pickle.dump(scaler, f)
+    # Save metadata about training and data freshness
+    try:
+        meta = {
+            'last_trained': datetime.utcnow().isoformat(),
+            'last_data_date': pd.to_datetime(df['date'].max()).isoformat(),
+            'training_samples': len(X_train),
+            'validation_samples': len(X_val),
+            'lookback_period': LOOKBACK_PERIOD
+        }
+        with open(os.path.join(MODELS_DIR, f"{symbol}{META_SUFFIX}"), 'w') as mf:
+            json.dump(meta, mf)
+        print(f"Saved metadata: {os.path.join(MODELS_DIR, f'{symbol}{META_SUFFIX}')}", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Failed to save metadata for {symbol}: {e}", file=sys.stderr)
     
     print(f"Model trained and saved: {model_path}", file=sys.stderr)
     
