@@ -17,6 +17,7 @@ Features:
 import os
 import sys
 import json
+import pickle
 import psycopg2
 import numpy as np
 import pandas as pd
@@ -140,7 +141,48 @@ def build_lstm_model(input_shape, units=50, dropout=0.2):
     return model
 
 
-def train_model(model, X_train, y_train, X_val, y_val, epochs=50, batch_size=32, symbol=None):
+def get_model_paths(symbol, lookback_period):
+    """Get model and scaler file paths for a symbol and lookback period"""
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    model_path = os.path.join(MODEL_DIR, f"{symbol}_lstm_lb{lookback_period}_model.h5")
+    scaler_path = os.path.join(MODEL_DIR, f"{symbol}_lstm_lb{lookback_period}_scaler.pkl")
+    return model_path, scaler_path
+
+
+def load_trained_model(symbol, lookback_period):
+    """Load pre-trained model and scaler if they exist"""
+    model_path, scaler_path = get_model_paths(symbol, lookback_period)
+    
+    if os.path.exists(model_path) and os.path.exists(scaler_path):
+        try:
+            print(f"📂 Loading pre-trained model for {symbol} (lookback={lookback_period})...", file=sys.stderr)
+            model = load_model(model_path)
+            with open(scaler_path, 'rb') as f:
+                scaler = pickle.load(f)
+            print(f"✅ Loaded pre-trained model and scaler", file=sys.stderr)
+            return model, scaler, True
+        except Exception as e:
+            print(f"⚠️  Error loading pre-trained model: {e}. Will train new model.", file=sys.stderr)
+            return None, None, False
+    
+    return None, None, False
+
+
+def save_model_and_scaler(model, scaler, symbol, lookback_period):
+    """Save trained model and scaler to disk"""
+    model_path, scaler_path = get_model_paths(symbol, lookback_period)
+    
+    try:
+        model.save(model_path)
+        with open(scaler_path, 'wb') as f:
+            pickle.dump(scaler, f)
+        print(f"💾 Saved model: {model_path}", file=sys.stderr)
+        print(f"💾 Saved scaler: {scaler_path}", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  Warning: Failed to save model/scaler: {e}", file=sys.stderr)
+
+
+def train_model(model, X_train, y_train, X_val, y_val, epochs=50, batch_size=32, symbol=None, lookback_period=None):
     """Train the LSTM model"""
     # Create model directory if it doesn't exist
     os.makedirs(MODEL_DIR, exist_ok=True)
@@ -150,8 +192,8 @@ def train_model(model, X_train, y_train, X_val, y_val, epochs=50, batch_size=32,
         EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True),
     ]
     
-    if symbol:
-        model_path = os.path.join(MODEL_DIR, f"{symbol}_lstm_model.h5")
+    if symbol and lookback_period:
+        model_path, _ = get_model_paths(symbol, lookback_period)
         callbacks.append(ModelCheckpoint(model_path, monitor='val_loss', save_best_only=True, verbose=0))
     
     # Train the model
@@ -276,25 +318,57 @@ def main():
         
         print(f"✅ Found {len(df)} data points", file=sys.stderr)
         
-        # Prepare data
-        print(f"🔧 Preparing data with lookback period: {lookback_period}...", file=sys.stderr)
-        X, y, scaler = prepare_data(df, lookback_period)
+        # Try to load pre-trained model first
+        model, scaler, model_loaded = load_trained_model(symbol, lookback_period)
         
-        # Split data
-        X_train, X_val, y_train, y_val = split_data(X, y)
-        print(f"📊 Training set: {len(X_train)}, Validation set: {len(X_val)}", file=sys.stderr)
-        
-        # Build model
-        print("🏗️  Building LSTM model...", file=sys.stderr)
-        model = build_lstm_model((lookback_period, 5))
-        
-        # Train model
-        print("🎓 Training model...", file=sys.stderr)
-        history, model = train_model(model, X_train, y_train, X_val, y_val, epochs=50, symbol=symbol)
-        
-        # Evaluate model
-        print("📈 Evaluating model...", file=sys.stderr)
-        metrics = evaluate_model(model, X_val, y_val, scaler)
+        if model_loaded:
+            # Model loaded, prepare data using the loaded scaler
+            print(f"🔧 Preparing data with lookback period: {lookback_period} (using loaded scaler)...", file=sys.stderr)
+            
+            # Use the loaded scaler to transform current data
+            features = ['open', 'high', 'low', 'close', 'volume']
+            data = df[features].values
+            scaled_data = scaler.transform(data)  # Use loaded scaler
+            
+            # Create sequences
+            X, y = [], []
+            for i in range(lookback_period, len(scaled_data)):
+                X.append(scaled_data[i-lookback_period:i])
+                close_idx = features.index('close')
+                y.append(scaled_data[i, close_idx])
+            
+            X, y = np.array(X), np.array(y)
+            
+            # Split for evaluation (we still need validation set for metrics)
+            X_train, X_val, y_train, y_val = split_data(X, y)
+            print(f"📊 Using validation set: {len(X_val)} samples", file=sys.stderr)
+            
+            # Evaluate model
+            print("📈 Evaluating model...", file=sys.stderr)
+            metrics = evaluate_model(model, X_val, y_val, scaler)
+        else:
+            # No pre-trained model, train a new one
+            print(f"🔧 Preparing data with lookback period: {lookback_period}...", file=sys.stderr)
+            X, y, scaler = prepare_data(df, lookback_period)
+            
+            # Split data
+            X_train, X_val, y_train, y_val = split_data(X, y)
+            print(f"📊 Training set: {len(X_train)}, Validation set: {len(X_val)}", file=sys.stderr)
+            
+            # Build model
+            print("🏗️  Building LSTM model...", file=sys.stderr)
+            model = build_lstm_model((lookback_period, 5))
+            
+            # Train model
+            print("🎓 Training model...", file=sys.stderr)
+            history, model = train_model(model, X_train, y_train, X_val, y_val, epochs=50, symbol=symbol, lookback_period=lookback_period)
+            
+            # Save model and scaler
+            save_model_and_scaler(model, scaler, symbol, lookback_period)
+            
+            # Evaluate model
+            print("📈 Evaluating model...", file=sys.stderr)
+            metrics = evaluate_model(model, X_val, y_val, scaler)
         
         # Predict future
         print(f"🔮 Predicting next {prediction_days} days...", file=sys.stderr)

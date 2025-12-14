@@ -3,6 +3,7 @@ package mk.ukim.finki.das.cryptoinfo.services;
 import mk.ukim.finki.das.cryptoinfo.dto.PredictionDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -18,7 +19,12 @@ public class PredictionService {
 
     private static final Logger logger = LoggerFactory.getLogger(PredictionService.class);
     private static final String PYTHON_FILTERS_DIR = "python_filters";
+    private final String pythonCmd;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public PredictionService(@Value("${python.command:python3}") String pythonCmd) {
+        this.pythonCmd = pythonCmd;
+    }
 
     public PredictionDTO getPrediction(String symbol) {
         try {
@@ -34,9 +40,8 @@ public class PredictionService {
 
             String fullSymbol = normalizeSymbol(symbol);
 
-            String pythonCmd = System.getProperty("os.name").toLowerCase().contains("win") ? "python" : "python3";
             List<String> command = new ArrayList<>();
-            command.add(pythonCmd);
+            command.add(this.pythonCmd);
             command.add(scriptFile.getAbsolutePath());
             command.add(fullSymbol);
 
