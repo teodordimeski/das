@@ -87,8 +87,9 @@ public class PythonFilterService {
             // Make script executable
             scriptFile.setExecutable(true);
 
-            // Build command
-            String[] command = {"python3", scriptFile.getAbsolutePath()};
+            // Build command (use "python" on Windows, "python3" on Linux/Mac)
+            String pythonCmd = System.getProperty("os.name").toLowerCase().contains("win") ? "python" : "python3";
+            String[] command = {pythonCmd, scriptFile.getAbsolutePath()};
             
             logger.info("📝 Executing: {}", scriptName);
             
@@ -98,14 +99,14 @@ public class PythonFilterService {
             
             Process process = processBuilder.start();
             
-            // Read output
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream())
-            );
-            
-            String line;
-            while ((line = reader.readLine()) != null) {
-                logger.info("[{}] {}", scriptName, line);
+            // Read output (use try-with-resources to ensure BufferedReader is closed)
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))) {
+                
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.info("[{}] {}", scriptName, line);
+                }
             }
             
             int exitCode = process.waitFor();
