@@ -14,6 +14,11 @@ Features:
 - Future price predictions
 """
 
+# Note: This script will now also write `predict.py`-compatible artifacts in
+# `lstm_models/` so the single-day prediction script can reuse models and
+# scalers without retraining (files: {symbol}_model.h5, {symbol}_scaler.pkl,
+# and {symbol}_meta.json).
+
 import os
 import sys
 import json
@@ -180,6 +185,55 @@ def save_model_and_scaler(model, scaler, symbol, lookback_period):
         print(f"💾 Saved scaler: {scaler_path}", file=sys.stderr)
     except Exception as e:
         print(f"⚠️  Warning: Failed to save model/scaler: {e}", file=sys.stderr)
+
+
+def save_predict_compatibility(model, scaler, symbol, lookback_period, last_data_date=None, training_samples=None, validation_samples=None):
+    """Save copies using the naming convention expected by `predict.py` and write metadata.
+
+    This writes:
+      - lstm_models/{symbol}_model.h5
+      - lstm_models/{symbol}_scaler.pkl
+      - lstm_models/{symbol}_meta.json
+    """
+    try:
+        os.makedirs(MODEL_DIR, exist_ok=True)
+
+        predict_model_path = os.path.join(MODEL_DIR, f"{symbol}_model.h5")
+        predict_scaler_path = os.path.join(MODEL_DIR, f"{symbol}_scaler.pkl")
+        meta_path = os.path.join(MODEL_DIR, f"{symbol}_meta.json")
+
+        # Save model
+        try:
+            model.save(predict_model_path)
+            print(f"💾 Saved predict-compatible model: {predict_model_path}", file=sys.stderr)
+        except Exception as e:
+            print(f"⚠️  Failed to save predict-compatible model: {e}", file=sys.stderr)
+
+        # Save scaler
+        try:
+            with open(predict_scaler_path, 'wb') as f:
+                pickle.dump(scaler, f)
+            print(f"💾 Saved predict-compatible scaler: {predict_scaler_path}", file=sys.stderr)
+        except Exception as e:
+            print(f"⚠️  Failed to save predict-compatible scaler: {e}", file=sys.stderr)
+
+        # Save metadata
+        try:
+            meta = {
+                'last_trained': datetime.utcnow().isoformat(),
+                'last_data_date': pd.to_datetime(last_data_date).isoformat() if last_data_date is not None else None,
+                'lookback_period': lookback_period,
+                'training_samples': training_samples,
+                'validation_samples': validation_samples
+            }
+            with open(meta_path, 'w') as mf:
+                json.dump(meta, mf)
+            print(f"💾 Saved metadata: {meta_path}", file=sys.stderr)
+        except Exception as e:
+            print(f"⚠️  Failed to save metadata for predict: {e}", file=sys.stderr)
+
+    except Exception as e:
+        print(f"⚠️  Unexpected error while saving predict-compatible artifacts: {e}", file=sys.stderr)
 
 
 def train_model(model, X_train, y_train, X_val, y_val, epochs=50, batch_size=32, symbol=None, lookback_period=None):
@@ -370,6 +424,22 @@ def main():
             print("📈 Evaluating model...", file=sys.stderr)
             metrics = evaluate_model(model, X_val, y_val, scaler)
         
+            # Ensure predict.py can reuse this model: save predict-compatible copies and metadata
+            try:
+                save_predict_compatibility(model, scaler, symbol, lookback_period,
+                                          last_data_date=df['date'].max(),
+                                          training_samples=len(X_train),
+                                          validation_samples=len(X_val))
+            except Exception as e:
+                print(f"⚠️  Failed to save predict-compatible artifacts after loading model: {e}", file=sys.stderr)
+            # Save predict-compatible copies & metadata so `predict.py` can pick them up
+            try:
+                save_predict_compatibility(model, scaler, symbol, lookback_period,
+                                          last_data_date=df['date'].max(),
+                                          training_samples=len(X_train),
+                                          validation_samples=len(X_val))
+            except Exception as e:
+                print(f"⚠️  Failed to save predict-compatible artifacts after training: {e}", file=sys.stderr)
         # Predict future
         print(f"🔮 Predicting next {prediction_days} days...", file=sys.stderr)
         last_sequence = X[-1]
@@ -386,22 +456,23 @@ def main():
             prediction_dates.append((current_date + timedelta(days=i)).strftime('%Y-%m-%d'))
         
         # Prepare response
+        # Use camelCase keys so Jackson on the Java side can map fields to DTOs
         result = {
             'symbol': symbol,
-            'lookback_period': lookback_period,
-            'training_samples': len(X_train),
-            'validation_samples': len(X_val),
-            'last_price': last_price,
-            'last_date': last_date,
+            'lookbackPeriod': lookback_period,
+            'trainingSamples': len(X_train),
+            'validationSamples': len(X_val),
+            'lastPrice': last_price,
+            'lastDate': last_date,
             'metrics': {
                 'rmse': metrics['rmse'],
                 'mape': metrics['mape'],
-                'r2_score': metrics['r2_score']
+                'r2Score': metrics['r2_score'] if 'r2_score' in metrics else metrics.get('r2Score')
             },
             'predictions': [
                 {
                     'date': date,
-                    'predicted_price': price
+                    'predictedPrice': price
                 }
                 for date, price in zip(prediction_dates, future_predictions)
             ]
