@@ -18,7 +18,7 @@ This feature implements LSTM (Long Short-Term Memory) neural network for predict
 - 30% for validation
 
 ✅ **Lookback Period**
-- Configurable (default: 30 days)
+- Configurable (default: 60 days)
 - Can be adjusted via API parameter (10-100 days)
 
 ✅ **LSTM Model Training**
