@@ -14,21 +14,15 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         
-        // Allow requests from React app
-        config.addAllowedOrigin("http://localhost:3000");
+        // Allow requests from all origins (all users)
+        config.addAllowedOriginPattern("*");
         
-        // Allow common HTTP methods
+        // Allow only GET requests
         config.addAllowedMethod("GET");
-        config.addAllowedMethod("POST");
-        config.addAllowedMethod("PUT");
-        config.addAllowedMethod("DELETE");
-        config.addAllowedMethod("OPTIONS");
+        config.addAllowedMethod("OPTIONS"); // Required for CORS preflight
         
         // Allow common headers
         config.addAllowedHeader("*");
-        
-        // Allow credentials if needed
-        config.setAllowCredentials(true);
         
         // Apply CORS configuration to all paths
         source.registerCorsConfiguration("/**", config);

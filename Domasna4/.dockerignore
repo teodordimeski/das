@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Build artifacts
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# React build
+crypto-frontend/build/
+crypto-frontend/node_modules/
+
+# Documentation
+*.md
+HELP.md
+
+# Testing
+*.log
+
+# Models (will be mounted as volumes)
+lstm_models/*.h5
+lstm_models/*.pkl
+lstm_models/*.json
+
+# Media
+*.mov
+screenRecording.mov
+
+# OS
+Thumbs.db
+

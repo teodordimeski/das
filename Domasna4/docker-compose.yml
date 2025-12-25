@@ -1,0 +1,73 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cryptoinfo-postgres
+    environment:
+      POSTGRES_DB: cryptoCoins
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"  # Changed external port to 5433 to avoid conflicts
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cryptoinfo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: cryptoinfo-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cryptoCoins
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      PYTHON_COMMAND: python3
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cryptoinfo-network
+    volumes:
+      - ./lstm_models:/app/lstm_models
+      - ./python_filters/lstm_models:/app/python_filters/lstm_models
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./crypto-frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:8080
+    container_name: cryptoinfo-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - cryptoinfo-network
+    restart: unless-stopped
+
+networks:
+  cryptoinfo-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+
